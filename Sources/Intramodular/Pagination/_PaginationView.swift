@@ -26,17 +26,20 @@ struct _PaginationView<Page: View> {
     let configuration: Configuration
     
     @Binding var currentPageIndex: Int
+    @Binding var currentScrollProgress: Float
     @Binding var progressionController: ProgressionController?
     
     init(
         content: AnyForEach<Page>,
         configuration: Configuration,
         currentPageIndex: Binding<Int>,
+        currentScrollProgress: Binding<Float>,
         progressionController: Binding<ProgressionController?>
     ) {
         self.content = content
         self.configuration = configuration
         self._currentPageIndex = currentPageIndex
+        self._currentScrollProgress = currentScrollProgress
         self._progressionController = progressionController
     }
 }
@@ -62,6 +65,9 @@ extension _PaginationView: UIViewControllerRepresentable {
         
         uiViewController.dataSource = .some(context.coordinator as! UIPageViewControllerDataSource)
         uiViewController.delegate = .some(context.coordinator as! UIPageViewControllerDelegate)
+        
+        let scrollView = uiViewController.view.subviews.filter { $0 is UIScrollView }.first as! UIScrollView
+        scrollView.delegate = .some(context.coordinator as! UIScrollViewDelegate)
         
         guard !content.isEmpty else {
             return uiViewController
@@ -221,6 +227,7 @@ extension _PaginationView {
         var isInitialPageIndexApplied: Bool = false
         var isTransitioning: Bool = false
         var didJustCompleteTransition: Bool = false
+        var startOffset: CGFloat = 0
         
         @usableFromInline
         init(_ parent: _PaginationView) {
@@ -290,15 +297,38 @@ extension _PaginationView {
                         
             isTransitioning = false
         }
+        
+        @objc func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+
+            startOffset = scrollView.contentOffset.x
+        }
+
+        @objc public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+
+            var direction : Float = 0 //scroll stopped
+
+            if startOffset < scrollView.contentOffset.x {
+                direction = 1 //going right
+            }else if startOffset > scrollView.contentOffset.x {
+                direction = -1 //going left
+            }
+
+            let positionFromStartOfCurrentPage = abs(startOffset - scrollView.contentOffset.x)
+            let percent = Float(parent.currentPageIndex) + Float(positionFromStartOfCurrentPage / scrollView.frame.width) * direction
+//            print(percent)
+            parent.currentScrollProgress = Float(percent)
+
+            //you can decide what to do with scroll
+        }
     }
     
     @usableFromInline
-    class _Coordinator_No_UIPageControl: Coordinator, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+    class _Coordinator_No_UIPageControl: Coordinator, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIScrollViewDelegate {
         
     }
     
     @usableFromInline
-    class _Coordinator_Default_UIPageControl: Coordinator, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+    class _Coordinator_Default_UIPageControl: Coordinator, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIScrollViewDelegate {
         @usableFromInline
         @objc func presentationCount(for pageViewController: UIPageViewController) -> Int {
             return parent.content.data.count

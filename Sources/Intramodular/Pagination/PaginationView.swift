@@ -43,11 +43,16 @@ public struct PaginationView<Page: View>: View {
     var initialPageIndex: Int?
     @usableFromInline
     var currentPageIndex: Binding<Int>?
+    @usableFromInline
+    var currentScrollProgress: Binding<Float>?
     
     /// The current page index internally used by `PaginationView`.
     /// Never access this directly, it is marked public as a workaround to a compiler bug.
     @inlinable
     @State public var _currentPageIndex = 0
+    
+    @inlinable
+    @State public var _currentScrollProgress: Float = 0.0
     
     /// Never access this directly, it is marked public as a workaround to a compiler bug.
     @inlinable
@@ -108,6 +113,7 @@ public struct PaginationView<Page: View>: View {
                         paginationState: paginationState
                     ),
                     currentPageIndex: currentPageIndex ?? $_currentPageIndex,
+                    currentScrollProgress: currentScrollProgress ?? $_currentScrollProgress,
                     progressionController: $_progressionController
                 )
                 
@@ -455,6 +461,11 @@ extension PaginationView {
     @inlinable
     public func currentPageIndex(_ currentPageIndex: Binding<Int>) -> Self {
         then({ $0.currentPageIndex = currentPageIndex })
+    }
+    
+    @inlinable
+    public func currentScrollProgress(_ currentScrollProgress: Binding<Float>) -> Self {
+        then({ $0.currentScrollProgress = currentScrollProgress })
     }
 }
 
